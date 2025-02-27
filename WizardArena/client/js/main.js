@@ -434,10 +434,23 @@ function addGameStyles() {
 
 function connectToServer() {
     // Connect to WebSocket server
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname || 'localhost';
-    const port = window.location.port || '3000';
-    socket = new WebSocket(`${protocol}//${host}:${port}`);
+    let serverUrl;
+    
+    // Check if we're in production (Vercel) or development (localhost)
+    if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost') === false) {
+        // Production environment - get URL from the server your network is deployed to
+        const networkUrl = 'wss://your-network-deployment.vercel.app'; // Replace with your actual network deployment URL
+        serverUrl = networkUrl;
+    } else {
+        // Local development environment
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = 'localhost';
+        const port = '3000';
+        serverUrl = `${protocol}//${host}:${port}`;
+    }
+    
+    console.log('Connecting to server:', serverUrl);
+    socket = new WebSocket(serverUrl);
     
     // Setup socket event handlers
     socket.onopen = () => {
