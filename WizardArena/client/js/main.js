@@ -438,9 +438,20 @@ function connectToServer() {
     
     // Check if we're in production (Vercel) or development (localhost)
     if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost') === false) {
-        // Production environment - get URL from the server your network is deployed to
-        const networkUrl = 'wss://your-network-deployment.vercel.app'; // Replace with your actual network deployment URL
-        serverUrl = networkUrl;
+        // Production environment - use the network server URL
+        // Use the correct WebSocket URL for the deployed server
+        serverUrl = 'wss://blu3-ekuls-projects.vercel.app';
+        
+        // If we're on a different domain than the WebSocket server, update the protocol
+        if (window.location.protocol === 'https:') {
+            // Make sure we're using secure WebSockets with HTTPS
+            if (!serverUrl.startsWith('wss://')) {
+                serverUrl = serverUrl.replace('ws://', 'wss://');
+                if (!serverUrl.startsWith('wss://')) {
+                    serverUrl = 'wss://' + serverUrl.replace('https://', '').replace('http://', '');
+                }
+            }
+        }
     } else {
         // Local development environment
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -455,6 +466,11 @@ function connectToServer() {
     // Setup socket event handlers
     socket.onopen = () => {
         console.log('Connected to server');
+    };
+    
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        showSystemMessage(`Connection error! Check console for details.`);
     };
     
     socket.onmessage = (event) => {
