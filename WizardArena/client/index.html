@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Arena - Multiplayer Magical Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <!-- Game Lobby Modal -->
+    <div id="lobbyModal" class="modal">
+        <div class="modal-content lobby-content">
+            <h2>Wizard Arena Lobby</h2>
+            
+            <div class="lobby-options">
+                <div class="option-card">
+                    <h3>Create New Game</h3>
+                    <div class="form-group">
+                        <label for="gameName">Game Name:</label>
+                        <input type="text" id="gameName" placeholder="My Magical Battle">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxPlayers">Max Players:</label>
+                        <input type="number" id="maxPlayers" min="2" max="20" value="10">
+                    </div>
+                    <div class="form-group checkbox">
+                        <input type="checkbox" id="privateGame">
+                        <label for="privateGame">Private Game</label>
+                    </div>
+                    <button id="createGameBtn" class="primary-btn">Create Game</button>
+                </div>
+                
+                <div class="option-card">
+                    <h3>Join Game</h3>
+                    <div class="form-group">
+                        <label for="gameId">Game Code:</label>
+                        <input type="text" id="gameId" placeholder="Enter game code">
+                        <button id="joinGameBtn" class="secondary-btn">Join Game</button>
+                    </div>
+                    <p>OR</p>
+                    <div class="public-games">
+                        <h4>Available Games</h4>
+                        <div id="gamesList" class="games-list">
+                            <p>Loading games...</p>
+                        </div>
+                        <button id="refreshGamesBtn" class="tertiary-btn">Refresh List</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="share-link-container" id="shareLinkContainer" style="display: none;">
+                <h3>Share this link with friends:</h3>
+                <div class="share-link-box">
+                    <input type="text" id="shareLink" readonly>
+                    <button id="copyLinkBtn">Copy</button>
+                </div>
+                <p class="share-text">Friends can join your game by clicking the link or entering the game code.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Name Entry Modal -->
+    <div id="nameModal" class="modal">
+        <div class="modal-content">
+            <h2>Enter The Wizard Arena</h2>
+            <p>Enter your wizard name to join the magical battle arena!</p>
+            <input type="text" id="nameInput" placeholder="Your Wizard Name" maxlength="15">
+            <button id="submitName">Join Battle</button>
+        </div>
+    </div>
+    
+    <!-- Game Container -->
+    <div id="gameContainer" class="hidden">
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Sidebar with Leaderboard and Chat -->
+        <div class="sidebar">
+            <!-- Leaderboard -->
+            <div class="leaderboard">
+                <h2>Top Wizards</h2>
+                <div id="leaderboardList"></div>
+            </div>
+            
+            <!-- Chat -->
+            <div class="chat">
+                <h2>Wizard Chat</h2>
+                <div id="chatMessages" class="chat-messages"></div>
+                <input type="text" id="chatInput" placeholder="Cast a message...">
+                <div class="game-info">
+                    <span id="gameIdDisplay"></span>
+                    <button id="copyGameIdBtn" title="Copy game ID">📋</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Audio Elements (placeholders to avoid missing file errors) -->
+    <audio id="collectSound"></audio>
+    <audio id="specialCollectSound"></audio>
+    <audio id="victorySound"></audio>
+    <audio id="absorptionSound"></audio>
+    
+    <!-- Scripts -->
+    <script src="js/main.js" type="module"></script>
+</body>
+</html>
