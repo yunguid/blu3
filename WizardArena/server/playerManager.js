@@ -121,32 +121,46 @@ function handlePlayerShoot(id, dirX, dirY, projectileType = 'default') {
     const player = players[id];
     if (!player) return;
     
+    console.log(`Player ${id} handlePlayerShoot called with projectileType:`, projectileType);
+    
     // Validate inputs
-    if (typeof dirX !== 'number' || typeof dirY !== 'number') return;
+    if (typeof dirX !== 'number' || typeof dirY !== 'number') {
+        console.log('Invalid direction inputs:', dirX, dirY);
+        return;
+    }
     
     // Minimum size check - can't shoot if too small
-    if (player.size < 15) return;
+    if (player.size < 15) {
+        console.log(`Player ${id} too small to shoot: ${player.size}`);
+        return;
+    }
     
     // Calculate projectile size, speed, and damage based on type
     let projectileSize, projectileSpeed, damage, aoeRadius;
+    console.log(`Selecting properties for projectile type: ${projectileType}`);
+    
     switch (projectileType) {
         case 'fast':
+            console.log('Creating fast projectile');
             projectileSize = player.size / 10;  // Smaller projectile
             projectileSpeed = 20;               // Faster speed
             damage = projectileSize;            // Lower damage
             break;
         case 'powerful':
+            console.log('Creating powerful projectile');
             projectileSize = player.size / 3;   // Larger projectile
             projectileSpeed = 8;                // Slower speed
             damage = projectileSize * 3;        // Higher damage
             break;
         case 'aoe':
+            console.log('Creating aoe projectile');
             projectileSize = player.size / 5;   // Medium projectile
             projectileSpeed = 10;               // Medium speed
             damage = projectileSize * 1.5;      // Medium damage
             aoeRadius = projectileSize * 3;     // Area of effect radius
             break;
         default:
+            console.log('Creating default projectile');
             projectileSize = player.size / 5;   // Default values from original code
             projectileSpeed = 12;               
             damage = projectileSize * 2;
@@ -157,8 +171,11 @@ function handlePlayerShoot(id, dirX, dirY, projectileType = 'default') {
     player.size -= projectileSize / 2;
     
     // Create projectile with unique ID
+    const projectileId = `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`Creating projectile id: ${projectileId} with type: ${projectileType}`);
+    
     const projectile = {
-        id: `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: projectileId,
         playerId: id,
         playerColor: player.color,
         size: projectileSize,
@@ -176,16 +193,26 @@ function handlePlayerShoot(id, dirX, dirY, projectileType = 'default') {
         ...(aoeRadius && { aoeRadius })  // Add aoeRadius property only for AOE projectiles
     };
     
+    console.log('Projectile created:', {
+        id: projectile.id,
+        type: projectile.type,
+        size: projectile.size,
+        speed: projectileSpeed,
+        damage: damage
+    });
+    
     // Add projectile to active projectiles
     projectiles.push(projectile);
     
     // Notify player of successful shot
     if (player.ws) {
-        player.ws.send(JSON.stringify({
+        const notification = {
             type: 'projectileCreated',
             id: projectile.id,
             projectileType  // Send the projectile type back to client
-        }));
+        };
+        console.log(`Sending projectile creation notification to player:`, notification);
+        player.ws.send(JSON.stringify(notification));
     }
 }
 

@@ -76,6 +76,7 @@ wss.on('connection', (ws, req) => {
                     break;
                     
                 case 'shoot':
+                    console.log(`Player ${playerId} shooting with projectile type:`, data.projectileType);
                     playerManager.handlePlayerShoot(playerId, data.dirX, data.dirY, data.projectileType);
                     break;
                 

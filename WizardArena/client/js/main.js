@@ -1256,15 +1256,25 @@ function shootProjectile() {
     // Send shoot command to server with projectile type
     // Ensure we're using the current selectedProjectileType
     // and update the window global variable to stay in sync
-    window.selectedProjectileType = selectedProjectileType;
-    console.log('Shooting with projectile type:', selectedProjectileType);
+    console.log('Before sync - selectedProjectileType:', selectedProjectileType);
+    console.log('Before sync - window.selectedProjectileType:', window.selectedProjectileType);
     
-    socket.send(JSON.stringify({
+    window.selectedProjectileType = selectedProjectileType;
+    
+    console.log('After sync - selectedProjectileType:', selectedProjectileType);
+    console.log('After sync - window.selectedProjectileType:', window.selectedProjectileType);
+    
+    // Create payload and log what's actually being sent
+    const payload = {
         type: 'shoot',
         dirX: normalizedDirX,
         dirY: normalizedDirY,
         projectileType: selectedProjectileType
-    }));
+    };
+    
+    console.log('Sending payload to server:', payload);
+    
+    socket.send(JSON.stringify(payload));
     
     // Show visual feedback
     showSystemMessage(`Firing ${selectedProjectileType} shot!`);
