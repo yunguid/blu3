@@ -116,6 +116,29 @@ function init() {
     } else {
         console.error('Game container element not found!');
     }
+
+    // Handle name submission - moved inside init function
+    try {
+        if (nameInput && submitNameBtn) {
+            nameInput.focus();
+            submitNameBtn.addEventListener('click', submitName);
+            nameInput.addEventListener('keypress', e => {
+                if (e.key === 'Enter') submitName();
+            });
+        }
+        
+        // Chat input handling
+        if (chatInput) {
+            chatInput.addEventListener('keypress', e => {
+                if (e.key === 'Enter' && chatInput.value.trim()) {
+                    sendChatMessage(chatInput.value);
+                    chatInput.value = '';
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Error setting up input handlers:", err);
+    }
 }
 
 // Create a fallback modal if the original one is not found
@@ -188,21 +211,6 @@ function createFallbackModal() {
         fallbackInput.focus();
     }
 }
-    
-    // Handle name submission
-    nameInput.focus();
-    submitNameBtn.addEventListener('click', submitName);
-    nameInput.addEventListener('keypress', e => {
-        if (e.key === 'Enter') submitName();
-    });
-    
-    // Chat input handling
-    chatInput.addEventListener('keypress', e => {
-        if (e.key === 'Enter' && chatInput.value.trim()) {
-            sendChatMessage(chatInput.value);
-            chatInput.value = '';
-        }
-    });
     
     // Initialize renderer with canvas
     initRenderer();
