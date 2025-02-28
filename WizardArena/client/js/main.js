@@ -436,18 +436,20 @@ function connectToServer() {
     // Connect to WebSocket server
     let serverUrl;
     
+    // Get gameId from URL or use a default
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameId = urlParams.get('game') || 'default';
+    
     // Check if we're in production (Vercel) or development (localhost)
     if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost') === false) {
-        // Production environment - use the network server URL
-        // Determine if we're on the client or network domain
+        // Production environment - use the network server URL with gameId parameter
         // Railway.app deployment - use standard URL without port
-        // Railway handles the WebSocket protocol automatically
-        serverUrl = 'wss://blu3-production.up.railway.app';
+        serverUrl = `wss://blu3-production.up.railway.app?gameId=${gameId}`;
         
         // Fallback options if needed
         if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
             // Local development - connect to local server
-            serverUrl = 'ws://localhost:3000';
+            serverUrl = `ws://localhost:3000?gameId=${gameId}`;
         }
         
         // If we're on a different domain than the WebSocket server, update the protocol
