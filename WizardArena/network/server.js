@@ -1216,6 +1216,6 @@ server.listen(PORT, '0.0.0.0', () => {
     // Log Railway.app specific information if deployed there
     if (process.env.RAILWAY_STATIC_URL) {
         console.log(`Railway deployment detected at: ${process.env.RAILWAY_STATIC_URL}`);
-        console.log(`WebSocket URL: ${process.env.RAILWAY_STATIC_URL.replace('https://', 'wss://')}`);
+        console.log(`WebSocket URL: wss://${process.env.RAILWAY_STATIC_URL.replace('https://', '')}`);
     }
 });
