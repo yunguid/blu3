@@ -38,7 +38,7 @@ app.use(express.json());
 
 // Configure CORS with specific settings
 app.use(cors({
-    origin: ['https://blu3-client-j8quvk5f8-ekuls-projects.vercel.app', 'https://blu3-client-fo2pw2i3m-ekuls-projects.vercel.app', 'https://blu3-client-qvs7n0xxc-ekuls-projects.vercel.app', 'https://blu3-client-d37oduvvc-ekuls-projects.vercel.app', '*'],
+    origin: ['https://blu3-client.vercel.app', 'https://blu3-client-j8quvk5f8-ekuls-projects.vercel.app', 'https://blu3-client-fo2pw2i3m-ekuls-projects.vercel.app', 'https://blu3-client-qvs7n0xxc-ekuls-projects.vercel.app', 'https://blu3-client-d37oduvvc-ekuls-projects.vercel.app', '*'],
     methods: ['GET', 'POST'],
     credentials: true
 }));

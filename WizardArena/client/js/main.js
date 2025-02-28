@@ -45,16 +45,31 @@ window.weaponTypes = weaponTypes;
 // Share selected weapon type with renderer
 window.selectedProjectileType = selectedProjectileType;
 
-// Game elements
-const gameContainer = document.getElementById('gameContainer');
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const chatInput = document.getElementById('chatInput');
-const chatMessages = document.getElementById('chatMessages');
-const nameModal = document.getElementById('nameModal');
-const nameInput = document.getElementById('nameInput');
-const submitNameBtn = document.getElementById('submitName');
-const leaderboardEl = document.getElementById('leaderboardList');
+// Game elements - wrap in try/catch to debug any DOM issues
+let gameContainer, canvas, ctx, chatInput, chatMessages, nameModal, nameInput, submitNameBtn, leaderboardEl;
+
+try {
+    gameContainer = document.getElementById('gameContainer');
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas ? canvas.getContext('2d') : null;
+    chatInput = document.getElementById('chatInput');
+    chatMessages = document.getElementById('chatMessages');
+    nameModal = document.getElementById('nameModal');
+    nameInput = document.getElementById('nameInput');
+    submitNameBtn = document.getElementById('submitName');
+    leaderboardEl = document.getElementById('leaderboardList');
+    
+    // Log elements for debugging
+    console.log('DOM Elements loaded:', {
+        gameContainer: !!gameContainer,
+        canvas: !!canvas,
+        ctx: !!ctx,
+        nameModal: !!nameModal,
+        nameInput: !!nameInput
+    });
+} catch (error) {
+    console.error('Error loading DOM elements:', error);
+}
 
 // Audio elements
 let bgMusic;
@@ -72,9 +87,23 @@ function init() {
     // Initialize audio
     initAudio();
     
+    // For debugging - log DOM elements state
+    console.log('Name Modal exists:', !!nameModal);
+    console.log('Game Container exists:', !!gameContainer);
+    
     // Show name modal first
-    nameModal.classList.add('active');
-    gameContainer.classList.add('hidden');
+    if (nameModal) {
+        nameModal.classList.add('active');
+        console.log('Name modal activated');
+    } else {
+        console.error('Name modal element not found!');
+    }
+    
+    if (gameContainer) {
+        gameContainer.classList.add('hidden');
+    } else {
+        console.error('Game container element not found!');
+    }
     
     // Handle name submission
     nameInput.focus();
