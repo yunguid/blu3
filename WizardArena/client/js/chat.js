@@ -4,6 +4,16 @@ import { sendToServer } from './network.js';
 let playerName = '';
 const maxMessages = 50;
 let messages = [];
+const chatMessages = document.getElementById('chatMessages');
+
+// Escapes special HTML characters to prevent XSS
+function escapeHTML(str) {
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+}
 
 export function initChat() {
     // Add chat event listeners
@@ -31,10 +41,10 @@ export function setPlayerName(name) {
     // Send initial name to server
     sendToServer({ type: 'setName', name: playerName });
     
-    // Add system message acknowledging player's name
+    // Add system message acknowledging player's name with escaped input
     addMessage({
         type: 'system',
-        content: `You've joined as ${playerName}!`
+        content: `You've joined as ${escapeHTML(playerName)}!`
     });
 }
 
@@ -57,38 +67,26 @@ export function receiveMessage(data) {
 }
 
 function addMessage(data) {
+    // Remove oldest message if limit is reached
+    if (messages.length >= maxMessages) {
+        messages.shift();
+        chatMessages.removeChild(chatMessages.firstChild);
+    }
     messages.push(data);
     
-    // Trim messages if we have too many
-    if (messages.length > maxMessages) {
-        messages = messages.slice(messages.length - maxMessages);
+    // Create and append new message element
+    const messageEl = document.createElement('div');
+    messageEl.className = 'chatMessage';
+    if (data.type === 'system') {
+        messageEl.innerHTML = `<em>${escapeHTML(data.content)}</em>`;
+    } else {
+        messageEl.innerHTML = `<span class="chatName" style="color: ${data.color || '#FFFFFF'}">${escapeHTML(data.name)}:</span> ${escapeHTML(data.message)}`;
     }
-    
-    // Update the display
-    renderMessages();
-}
-
-function renderMessages() {
-    const chatMessages = document.getElementById('chatMessages');
-    
-    // Create HTML for messages
-    let messagesHTML = '';
-    
-    messages.forEach(msg => {
-        if (msg.type === 'system') {
-            messagesHTML += `<div class="chatMessage system"><em>${msg.content}</em></div>`;
-        } else {
-            messagesHTML += `<div class="chatMessage"><span class="chatName" style="color: ${msg.color || '#FFFFFF'}">${msg.name}:</span> ${msg.message}</div>`;
-        }
-    });
-    
-    chatMessages.innerHTML = messagesHTML;
-    
-    // Scroll to bottom
+    chatMessages.appendChild(messageEl);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 // Function to get all current messages (for new players)
 export function getChatHistory() {
     return messages;
-} 
+}
