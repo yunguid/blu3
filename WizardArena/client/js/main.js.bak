@@ -141,6 +141,7 @@ function init() {
     }
 }
 
+// Create a fallback modal if the original one is not found
 function createFallbackModal() {
     console.log('Creating fallback modal');
     const fallbackModal = document.createElement('div');
@@ -209,6 +210,16 @@ function createFallbackModal() {
         // Focus the input
         fallbackInput.focus();
     }
+}
+    
+    // Initialize renderer with canvas
+    initRenderer();
+    
+    // Add game UI styles
+    addGameStyles();
+    
+    // Connect to server
+    connectToServer();
 }
 
 function resizeCanvas() {
