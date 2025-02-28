@@ -139,6 +139,25 @@ function init() {
     } catch (err) {
         console.error("Error setting up input handlers:", err);
     }
+    
+    // Initialize renderer with canvas
+    try {
+        if (canvas) {
+            initRenderer();
+            console.log('Renderer initialized');
+        } else {
+            console.error('Cannot initialize renderer - canvas element not found');
+        }
+    } catch (error) {
+        console.error('Error initializing renderer:', error);
+    }
+    
+    // Add game UI styles
+    addGameStyles();
+    
+    // Connect to server
+    connectToServer();
+    console.log('Init complete');
 }
 
 function createFallbackModal() {
@@ -212,8 +231,10 @@ function createFallbackModal() {
 }
 
 function resizeCanvas() {
-    canvas.width = window.innerWidth - 350; // Leave space for sidebar
-    canvas.height = window.innerHeight;
+    if (canvas) {
+        canvas.width = window.innerWidth - 350; // Leave space for sidebar
+        canvas.height = window.innerHeight;
+    }
 }
 
 function initAudio() {
@@ -816,17 +837,47 @@ function showDeathModal(killerName) {
 }
 
 function submitName() {
+    console.log('Submit name called');
     const name = nameInput.value.trim();
     if (name) {
         playerName = name;
-        nameModal.classList.remove('active');
-        gameContainer.classList.remove('hidden');
         
-        // Send name to server
-        socket.send(JSON.stringify({
-            type: 'setName',
-            name: playerName
-        }));
+        // Hide the modal with inline styles for extra certainty
+        if (nameModal) {
+            nameModal.classList.remove('active');
+            nameModal.style.display = 'none';
+            console.log('Name modal hidden');
+        }
+        
+        // Show the game container with inline styles
+        if (gameContainer) {
+            gameContainer.classList.remove('hidden');
+            gameContainer.style.display = 'flex';
+            console.log('Game container shown');
+        }
+        
+        // Check if socket is connected before sending
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            console.log('Sending name to server:', playerName);
+            try {
+                socket.send(JSON.stringify({
+                    type: 'setName',
+                    name: playerName
+                }));
+            } catch (error) {
+                console.error('Error sending name to server:', error);
+                showSystemMessage('Connection error! Could not send name to server.');
+            }
+        } else {
+            console.error('Socket not connected! ReadyState:', socket ? socket.readyState : 'null');
+            showSystemMessage('Connection error! Not connected to server.');
+            
+            // Try reconnecting
+            if (socket && socket.readyState !== WebSocket.CONNECTING) {
+                console.log('Attempting to reconnect...');
+                connectToServer();
+            }
+        }
         
         // Start game loop
         requestAnimationFrame(gameLoop);
@@ -840,23 +891,36 @@ function submitName() {
 }
 
 function setupControls() {
-    // Mouse movement
-    canvas.addEventListener('mousemove', handleMouseMove);
-    
-    // Mobile touch controls
-    canvas.addEventListener('touchmove', handleTouchMove);
-    
-    // Mouse up and down
-    canvas.addEventListener('mousedown', () => isMoving = true);
-    canvas.addEventListener('mouseup', () => isMoving = false);
-    canvas.addEventListener('mouseout', () => isMoving = false);
-    
-    // Touch start and end
-    canvas.addEventListener('touchstart', () => isMoving = true);
-    canvas.addEventListener('touchend', () => isMoving = false);
-    
-    // Add zoom controls (mousewheel)
-    canvas.addEventListener('wheel', handleZoom);
+    console.log('Setting up controls');
+    try {
+        // Check if canvas exists before adding event listeners
+        if (canvas) {
+            // Mouse movement
+            canvas.addEventListener('mousemove', handleMouseMove);
+            
+            // Mobile touch controls
+            canvas.addEventListener('touchmove', handleTouchMove);
+            
+            // Mouse up and down
+            canvas.addEventListener('mousedown', () => isMoving = true);
+            canvas.addEventListener('mouseup', () => isMoving = false);
+            canvas.addEventListener('mouseout', () => isMoving = false);
+            
+            // Touch start and end
+            canvas.addEventListener('touchstart', () => isMoving = true);
+            canvas.addEventListener('touchend', () => isMoving = false);
+            
+            // Add zoom controls (mousewheel)
+            canvas.addEventListener('wheel', handleZoom);
+            
+            console.log('Canvas event listeners added');
+        } else {
+            console.error('Cannot set up canvas controls - canvas element not found!');
+            showSystemMessage('Error: Game canvas not found!');
+        }
+    } catch (error) {
+        console.error('Error setting up controls:', error);
+    }
     
     // Add keyboard controls
     document.addEventListener('keydown', handleKeyDown);
