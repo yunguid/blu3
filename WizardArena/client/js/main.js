@@ -87,23 +87,107 @@ function init() {
     // Initialize audio
     initAudio();
     
-    // For debugging - log DOM elements state
+    // For debugging - log DOM elements state 
     console.log('Name Modal exists:', !!nameModal);
     console.log('Game Container exists:', !!gameContainer);
     
-    // Show name modal first
+    // Force show name modal with inline styles to bypass CSS issues
     if (nameModal) {
+        nameModal.style.display = 'flex';
+        nameModal.style.opacity = '1';
         nameModal.classList.add('active');
-        console.log('Name modal activated');
+        console.log('Name modal forced active with inline styles');
+        
+        // Also add style to modal content for visibility
+        const modalContent = nameModal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.opacity = '1';
+            modalContent.style.transform = 'scale(1)';
+        }
     } else {
         console.error('Name modal element not found!');
+        // Try to create a fallback modal
+        createFallbackModal();
     }
     
     if (gameContainer) {
         gameContainer.classList.add('hidden');
+        gameContainer.style.display = 'none';
     } else {
         console.error('Game container element not found!');
     }
+}
+
+// Create a fallback modal if the original one is not found
+function createFallbackModal() {
+    console.log('Creating fallback modal');
+    const fallbackModal = document.createElement('div');
+    fallbackModal.id = 'fallbackNameModal';
+    fallbackModal.style.position = 'fixed';
+    fallbackModal.style.top = '0';
+    fallbackModal.style.left = '0';
+    fallbackModal.style.width = '100%';
+    fallbackModal.style.height = '100%';
+    fallbackModal.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    fallbackModal.style.display = 'flex';
+    fallbackModal.style.justifyContent = 'center';
+    fallbackModal.style.alignItems = 'center';
+    fallbackModal.style.zIndex = '9999';
+    
+    fallbackModal.innerHTML = `
+        <div style="background: #1E3A8A; padding: 30px; border-radius: 10px; text-align: center; width: 400px;">
+            <h2 style="color: gold; margin-bottom: 20px;">Enter Your Wizard Name</h2>
+            <input type="text" id="fallbackNameInput" placeholder="Your name here" 
+                style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid gold;">
+            <button id="fallbackSubmitBtn" 
+                style="background: gold; color: #1E3A8A; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                Enter Game
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(fallbackModal);
+    
+    // Set up fallback submit handler
+    const fallbackInput = document.getElementById('fallbackNameInput');
+    const fallbackBtn = document.getElementById('fallbackSubmitBtn');
+    
+    if (fallbackBtn && fallbackInput) {
+        fallbackBtn.addEventListener('click', () => {
+            const name = fallbackInput.value.trim();
+            if (name) {
+                playerName = name;
+                fallbackModal.style.display = 'none';
+                if (gameContainer) {
+                    gameContainer.classList.remove('hidden');
+                    gameContainer.style.display = 'flex';
+                }
+                
+                // Send name to server
+                if (socket) {
+                    socket.send(JSON.stringify({
+                        type: 'setName',
+                        name: playerName
+                    }));
+                }
+                
+                // Start game loop
+                requestAnimationFrame(gameLoop);
+                setupControls();
+                createWeaponSelector();
+            }
+        });
+        
+        fallbackInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                fallbackBtn.click();
+            }
+        });
+        
+        // Focus the input
+        fallbackInput.focus();
+    }
+}
     
     // Handle name submission
     nameInput.focus();
