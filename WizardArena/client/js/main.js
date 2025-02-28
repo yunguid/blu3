@@ -258,9 +258,100 @@ function initAudio() {
     console.log("Audio initialized (placeholders)");
 }
 
+// Create and update connection status indicator
+let connectionIndicator = null;
+
+function createConnectionIndicator() {
+    // Create the indicator element if it doesn't exist yet
+    if (!connectionIndicator) {
+        connectionIndicator = document.createElement('div');
+        connectionIndicator.className = 'connection-indicator connecting';
+        connectionIndicator.dataset.status = 'Connecting...';
+        document.body.appendChild(connectionIndicator);
+        
+        // Add click handler to attempt manual reconnection
+        connectionIndicator.addEventListener('click', () => {
+            if (connectionIndicator.classList.contains('disconnected')) {
+                showSystemMessage('Attempting to reconnect...');
+                connectToServer();
+            }
+        });
+    }
+    return connectionIndicator;
+}
+
+function updateConnectionStatus(status, message) {
+    const indicator = createConnectionIndicator();
+    
+    // Remove all status classes
+    indicator.classList.remove('connected', 'connecting', 'disconnected');
+    
+    // Add appropriate class
+    indicator.classList.add(status);
+    
+    // Update tooltip
+    indicator.dataset.status = message;
+    
+    console.log(`Connection status updated: ${status} - ${message}`);
+}
+
 function addGameStyles() {
     const style = document.createElement('style');
     style.textContent = `
+        /* Connection status indicator */
+        .connection-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            z-index: 9999;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .connection-indicator.connected {
+            background-color: #2ecc71; /* Green for connected */
+        }
+        
+        .connection-indicator.connecting {
+            background-color: #f39c12; /* Orange for connecting */
+            animation: pulse 1s infinite;
+        }
+        
+        .connection-indicator.disconnected {
+            background-color: #e74c3c; /* Red for disconnected */
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Tooltip for connection indicator */
+        .connection-indicator::after {
+            content: attr(data-status);
+            position: absolute;
+            top: -25px;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            white-space: nowrap;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s;
+        }
+        
+        .connection-indicator:hover::after {
+            visibility: visible;
+            opacity: 1;
+        }
+        
         .system-notification {
             position: fixed;
             top: 50px;
@@ -614,11 +705,17 @@ function connectToServer() {
     }
     
     console.log('Connecting to server:', serverUrl);
+    updateConnectionStatus('connecting', 'Connecting to game server...');
     socket = new WebSocket(serverUrl);
     
     // Setup socket event handlers
     socket.onopen = () => {
         console.log('Connected to server');
+        updateConnectionStatus('connected', 'Connected to game server');
+        showSystemMessage('Connected to server');
+        
+        // Reset reconnect attempts on successful connection
+        reconnectAttempts = 0;
         
         // Start periodic ping to keep connection alive and detect disconnects quickly
         startPingInterval();
@@ -626,7 +723,24 @@ function connectToServer() {
     
     socket.onerror = (error) => {
         console.error('WebSocket error:', error);
-        showSystemMessage(`Connection error! Check console for details.`);
+        updateConnectionStatus('disconnected', 'Connection error');
+        showSystemMessage(`Connection error! Attempting to recover...`);
+        
+        // Log more detailed error information
+        console.log('WebSocket error details:');
+        console.log('- Socket state:', socket ? socket.readyState : 'null');
+        console.log('- Socket URL:', serverUrl);
+        console.log('- Navigator online:', navigator.onLine);
+        
+        // Try to force reconnection after error
+        try {
+            // Gracefully close socket if possible
+            if (socket && socket.readyState !== WebSocket.CLOSED && socket.readyState !== WebSocket.CLOSING) {
+                socket.close(1000, 'Closing due to error');
+            }
+        } catch (closeError) {
+            console.error('Error while closing socket after error:', closeError);
+        }
     };
     
     socket.onmessage = (event) => {
@@ -741,27 +855,50 @@ function connectToServer() {
         }
     };
     
-    // Limit reconnection attempts to prevent loops
+    // Configure reconnection behavior
     let reconnectAttempts = 0;
-    const MAX_RECONNECT_ATTEMPTS = 3;
+    const MAX_RECONNECT_ATTEMPTS = 5; // Increased from 3 to 5
+    const RECONNECT_DELAY = 3000; // 3 seconds
+    
+    // Initialize a variable to track if a reconnection is already in progress
+    let isReconnecting = false;
     
     socket.onclose = (event) => {
         console.log('Disconnected from server. Code:', event.code, 'Reason:', event.reason);
+        updateConnectionStatus('disconnected', 'Disconnected - Click to reconnect');
         
         // Stop ping interval
         if (pingInterval) {
             clearInterval(pingInterval);
             pingInterval = null;
+            console.log('Ping interval cleared due to socket close');
+        }
+        
+        // Prevent multiple simultaneous reconnection attempts
+        if (isReconnecting) {
+            console.log('Reconnection already in progress, skipping new attempt');
+            return;
         }
         
         // Only attempt to reconnect a few times
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-            console.log(`Reconnect attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`);
+            isReconnecting = true;
+            const delay = RECONNECT_DELAY * (reconnectAttempts + 1); // Exponential backoff
             reconnectAttempts++;
-            setTimeout(connectToServer, 3000); // Try to reconnect after 3 seconds
+            
+            console.log(`Reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${delay}ms`);
+            showSystemMessage(`Connection lost. Reconnecting in ${delay/1000} seconds...`);
+            updateConnectionStatus('connecting', `Reconnecting in ${delay/1000}s (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+            
+            setTimeout(() => {
+                console.log('Attempting to reconnect now...');
+                connectToServer();
+                isReconnecting = false;
+            }, delay);
         } else {
             console.log('Max reconnect attempts reached. Please refresh the page.');
-            showSystemMessage('Connection issues. Please refresh the page to try again.');
+            showSystemMessage('Connection issues. Please refresh the page to try again. (Max reconnect attempts reached)');
+            updateConnectionStatus('disconnected', 'Failed to connect - Refresh page');
         }
     };
     
@@ -772,6 +909,7 @@ function connectToServer() {
             if (data.type === 'pong') {
                 // Update last pong time for connection monitoring
                 lastPongTime = Date.now();
+                console.log('Received pong from server, updated lastPongTime:', lastPongTime);
             }
         } catch (e) {
             console.error('Error parsing message:', e);
@@ -1171,26 +1309,41 @@ function startPingInterval() {
     // Clear any existing interval
     if (pingInterval) {
         clearInterval(pingInterval);
+        console.log('Cleared existing ping interval');
     }
     
     // Reset last pong time
     lastPongTime = Date.now();
+    console.log('Starting ping interval with initial lastPongTime:', lastPongTime);
     
     // Start the interval
     pingInterval = setInterval(() => {
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
+        if (!socket) {
+            console.warn('Socket is null, clearing ping interval');
+            clearInterval(pingInterval);
+            return;
+        }
+        
+        if (socket.readyState !== WebSocket.OPEN) {
+            console.warn('Socket not open, state:', socket.readyState, 'clearing ping interval');
             clearInterval(pingInterval);
             return;
         }
         
         // Check if we've received a pong recently
         const now = Date.now();
+        console.log('Checking pong status. Last pong:', lastPongTime, 'Now:', now, 'Diff:', now - lastPongTime);
+        
         if (now - lastPongTime > PONG_TIMEOUT) {
             console.warn('No pong received in', PONG_TIMEOUT, 'ms. Connection may be dead.');
             
-            // Try to close and reconnect
+            // Update UI to indicate connection issues
+            showSystemMessage("Connection issues detected. Attempting to reconnect...");
+            
+            // Try to close gracefully before reconnecting
             try {
-                socket.close();
+                console.log('Attempting to close socket before reconnecting');
+                socket.close(1000, 'Connection timeout - reconnecting');
             } catch (e) {
                 console.error('Error closing socket:', e);
             }
@@ -1201,14 +1354,23 @@ function startPingInterval() {
         
         // Send ping
         try {
+            console.log('Sending ping to server');
             socket.send(JSON.stringify({
                 type: 'ping',
                 timestamp: now
             }));
         } catch (e) {
             console.error('Error sending ping:', e);
+            // Try to reconnect if ping sending fails
+            try {
+                socket.close();
+            } catch (closeErr) {
+                console.error('Error closing socket after ping failure:', closeErr);
+            }
         }
     }, PING_INTERVAL);
+    
+    console.log('Ping interval started with frequency:', PING_INTERVAL, 'ms');
 }
 
 // Shooting mechanism
