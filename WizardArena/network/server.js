@@ -567,6 +567,18 @@ wss.on('connection', (ws, req) => {
                     // Handle client console log reporting
                     errorLogger.handleClientLog(data, ws.clientInfo);
                     break;
+                
+                case 'userDisconnect':
+                    // Handle explicit user disconnect (tab closed, etc.)
+                    console.log(`User initiated disconnect: ${ws.clientInfo.id}, message: ${data.message || 'None'}`);
+                    
+                    // We'll let the onclose handler clean up game state
+                    try {
+                        ws.close(1000, 'User initiated disconnect');
+                    } catch (error) {
+                        console.error('Error closing socket after user disconnect:', error);
+                    }
+                    break;
                     
                 default:
                     console.warn(`Unknown message type: ${data.type}`);

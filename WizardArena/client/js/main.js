@@ -619,6 +619,9 @@ function connectToServer() {
     // Setup socket event handlers
     socket.onopen = () => {
         console.log('Connected to server');
+        
+        // Start periodic ping to keep connection alive and detect disconnects quickly
+        startPingInterval();
     };
     
     socket.onerror = (error) => {
@@ -639,6 +642,8 @@ function connectToServer() {
                 break;
                 
             case 'chat':
+            case 'chatMessage':
+                console.log('Received chat message:', data);
                 addChatMessage(data);
                 break;
                 
@@ -742,6 +747,12 @@ function connectToServer() {
     socket.onclose = (event) => {
         console.log('Disconnected from server. Code:', event.code, 'Reason:', event.reason);
         
+        // Stop ping interval
+        if (pingInterval) {
+            clearInterval(pingInterval);
+            pingInterval = null;
+        }
+        
         // Only attempt to reconnect a few times
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             console.log(`Reconnect attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`);
@@ -752,6 +763,19 @@ function connectToServer() {
             showSystemMessage('Connection issues. Please refresh the page to try again.');
         }
     };
+    
+    // Also handle pong responses
+    socket.addEventListener('message', function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'pong') {
+                // Update last pong time for connection monitoring
+                lastPongTime = Date.now();
+            }
+        } catch (e) {
+            console.error('Error parsing message:', e);
+        }
+    });
 }
 
 // Show system message
@@ -1130,6 +1154,57 @@ function handleKeyDown(e) {
     }
 }
 
+// Connection monitoring variables
+let pingInterval = null;
+let lastPongTime = 0;
+const PING_INTERVAL = 10000; // 10 seconds
+const PONG_TIMEOUT = 15000; // 15 seconds
+
+// Function to start pinging the server periodically
+function startPingInterval() {
+    // Clear any existing interval
+    if (pingInterval) {
+        clearInterval(pingInterval);
+    }
+    
+    // Reset last pong time
+    lastPongTime = Date.now();
+    
+    // Start the interval
+    pingInterval = setInterval(() => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            clearInterval(pingInterval);
+            return;
+        }
+        
+        // Check if we've received a pong recently
+        const now = Date.now();
+        if (now - lastPongTime > PONG_TIMEOUT) {
+            console.warn('No pong received in', PONG_TIMEOUT, 'ms. Connection may be dead.');
+            
+            // Try to close and reconnect
+            try {
+                socket.close();
+            } catch (e) {
+                console.error('Error closing socket:', e);
+            }
+            
+            // Reconnection will happen in the onclose handler
+            return;
+        }
+        
+        // Send ping
+        try {
+            socket.send(JSON.stringify({
+                type: 'ping',
+                timestamp: now
+            }));
+        } catch (e) {
+            console.error('Error sending ping:', e);
+        }
+    }, PING_INTERVAL);
+}
+
 // Shooting mechanism
 let lastShootTime = 0;
 const SHOOT_COOLDOWN = 2000; // 2 seconds cooldown
@@ -1199,14 +1274,24 @@ function sendChatMessage(message) {
 function addChatMessage(data) {
     console.log("Received chat message:", data);
     
+    if (!chatMessages) {
+        console.error("Chat messages container not found");
+        return;
+    }
+    
     const messageEl = document.createElement('div');
     messageEl.classList.add('message');
     
-    if (data.isSystem) {
+    if (data.isSystem || data.type === 'system') {
         messageEl.classList.add('system-message');
-        messageEl.textContent = data.text;
+        messageEl.textContent = data.text || data.content || 'System message';
     } else {
-        messageEl.innerHTML = `<span class="sender" style="color: ${data.color || '#ffffff'}">${data.sender || 'Unknown'}: </span>${data.text}`;
+        // Handle both the client's format and the server's format
+        const sender = data.sender || 'Unknown';
+        const color = data.color || '#ffffff';
+        const content = data.text || data.content || '';
+        
+        messageEl.innerHTML = `<span class="sender" style="color: ${color}">${sender}: </span>${content}`;
     }
     
     // Add to chat container with a slide-in animation
@@ -1426,6 +1511,38 @@ function showWeaponSwitchEffect(type) {
         }, 1000);
     }, 10);
 }
+
+// Handle page unload (tab closed, refresh, etc.)
+window.addEventListener('beforeunload', () => {
+    // Attempt to close the WebSocket connection cleanly
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        // Send a close message first
+        try {
+            socket.send(JSON.stringify({
+                type: 'userDisconnect',
+                message: 'User closed the page'
+            }));
+        } catch (e) {
+            console.error('Error sending disconnect message:', e);
+        }
+        
+        // Then close the socket
+        try {
+            socket.close(1000, 'User closed the page');
+        } catch (e) {
+            console.error('Error closing socket on page unload:', e);
+        }
+    }
+    
+    // Clear any intervals
+    if (pingInterval) {
+        clearInterval(pingInterval);
+    }
+    
+    if (window.movementInterval) {
+        clearInterval(window.movementInterval);
+    }
+});
 
 // Start the game
 document.addEventListener('DOMContentLoaded', init);
