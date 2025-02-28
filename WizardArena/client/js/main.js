@@ -440,6 +440,18 @@ function connectToServer() {
     const urlParams = new URLSearchParams(window.location.search);
     const gameId = urlParams.get('game') || 'default';
     
+    // Add debug mode
+    const debugMode = urlParams.get('debug') === 'true';
+    if (debugMode) {
+        console.log('Debug mode enabled');
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('JavaScript error:', message, 'at', source, lineno, colno);
+            console.error('Error object:', error);
+            showSystemMessage(`JS Error: ${message}`);
+            return true;
+        };
+    }
+    
     // Check if we're in production (Vercel) or development (localhost)
     if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost') === false) {
         // Production environment - use the network server URL with gameId parameter

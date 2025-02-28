@@ -35,7 +35,13 @@ dotenv.config();
 // Initialize express
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// Configure CORS with specific settings
+app.use(cors({
+    origin: ['https://blu3-client-j8quvk5f8-ekuls-projects.vercel.app', 'https://blu3-client-fo2pw2i3m-ekuls-projects.vercel.app', 'https://blu3-client-qvs7n0xxc-ekuls-projects.vercel.app', 'https://blu3-client-d37oduvvc-ekuls-projects.vercel.app', '*'],
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 
 // Enable parsing of JSON bodies
 app.use(express.json());
@@ -46,14 +52,25 @@ app.use(express.static(path.join(__dirname, '../client')));
 // Create HTTP server
 const server = http.createServer(app);
 
-// Initialize WebSocket server
+// Initialize WebSocket server with more specific settings
 const wss = new WebSocket.Server({ 
     server,
     // Enable client tracking
     clientTracking: true,
+    // Increase max payload size
+    maxPayload: 50 * 1024 * 1024, // 50MB
     // Add ping to keep connections alive
-    pingInterval: 10000,
-    pingTimeout: 5000
+    pingInterval: 10000, 
+    pingTimeout: 5000,
+    // Ensure proper handling
+    handleProtocols: (protocols) => {
+        return protocols[0];
+    },
+    // Verify Origin
+    verifyClient: ({origin, req}, callback) => {
+        // Accept all connections for testing
+        callback(true);
+    }
 });
 
 // Store active connections by game session
@@ -260,12 +277,21 @@ wss.on('connection', (ws, req) => {
         }
         
         // Send initial data to the player
+        // Log connection details for debugging
+        console.log(`Sending init message to player ${playerId}. Game ID: ${gameId}`);
+        
+        // Send more complete initialization data
         ws.send(JSON.stringify({
             type: 'init',
             id: playerId,
             gameId,
             timestamp: Date.now(),
-            message: gameId ? 'Connected to game' : 'Connected to server'
+            message: gameId ? 'Connected to game' : 'Connected to server',
+            debug: {
+                serverTime: new Date().toISOString(),
+                connectionType: 'WebSocket',
+                protocol: ws.protocol || 'none'
+            }
         }));
     } catch (error) {
         console.error('Error handling WebSocket connection:', error);
