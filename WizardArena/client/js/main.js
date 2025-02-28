@@ -440,8 +440,8 @@ function connectToServer() {
     if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost') === false) {
         // Production environment - use the network server URL
         // Determine if we're on the client or network domain
-        // Railway.app deployment with the correct URL
-        serverUrl = 'wss://blu3-production.up.railway.app';
+        // Railway.app deployment with the correct URL including port 8080
+        serverUrl = 'wss://blu3-production.up.railway.app:8080';
         
         // Fallback options if needed
         if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
