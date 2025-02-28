@@ -1207,8 +1207,15 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Start the server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Game server ready at: http://localhost:${PORT}`);
     console.log(`Admin logs available at: http://localhost:${PORT}/admin/logs`);
+    console.log(`WebSocket server ready at: ws://localhost:${PORT}`);
+    
+    // Log Railway.app specific information if deployed there
+    if (process.env.RAILWAY_STATIC_URL) {
+        console.log(`Railway deployment detected at: ${process.env.RAILWAY_STATIC_URL}`);
+        console.log(`WebSocket URL: ${process.env.RAILWAY_STATIC_URL.replace('https://', 'wss://')}`);
+    }
 });
