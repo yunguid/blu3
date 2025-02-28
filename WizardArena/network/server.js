@@ -189,6 +189,34 @@ app.get('/game/:gameId', (req, res) => {
     res.redirect(`/?game=${gameId}`);
 });
 
+// Create a default game session at startup if it doesn't exist
+function ensureDefaultGameSession() {
+    const defaultGameId = 'default';
+    let defaultSession = getGameSession(defaultGameId);
+    
+    if (!defaultSession) {
+        console.log('Creating default game session');
+        defaultSession = createGameSession(defaultGameId, {
+            name: 'Default Game',
+            maxPlayers: 20,
+            isPrivate: false,
+            createdAt: new Date().toISOString(),
+            players: {}
+        });
+        
+        // Initialize connections for this game
+        gameConnections.set(defaultGameId, new Set());
+        console.log('Default game session created with ID:', defaultGameId);
+    } else {
+        console.log('Default game session already exists');
+    }
+    
+    return defaultSession;
+}
+
+// Create the default game session at startup
+const defaultGameSession = ensureDefaultGameSession();
+
 // WebSocket connection handling
 wss.on('connection', (ws, req) => {
     try {
@@ -197,10 +225,13 @@ wss.on('connection', (ws, req) => {
         const userAgent = req.headers['user-agent'] || 'Unknown';
         
         // Get gameId from URL parameters - handle malformed URLs gracefully
-        let gameId = null;
+        let gameId = 'default'; // Default to 'default' game session
         try {
             const url = new URL(req.url, `http://${req.headers.host}`);
-            gameId = url.searchParams.get('gameId');
+            const urlGameId = url.searchParams.get('gameId');
+            if (urlGameId) {
+                gameId = urlGameId;
+            }
         } catch (error) {
             console.warn('Invalid URL in WebSocket connection:', req.url);
             
@@ -208,7 +239,10 @@ wss.on('connection', (ws, req) => {
             const urlParts = req.url.split('?');
             if (urlParts.length > 1) {
                 const searchParams = new URLSearchParams(urlParts[1]);
-                gameId = searchParams.get('gameId');
+                const urlGameId = searchParams.get('gameId');
+                if (urlGameId) {
+                    gameId = urlGameId;
+                }
             }
         }
         
@@ -227,54 +261,52 @@ wss.on('connection', (ws, req) => {
         // Check player limit before adding to game
         const MAX_PLAYERS_PER_GAME = 20; // Define a reasonable limit
         
-        // Check if game exists
-        let gameSession = null;
-        if (gameId) {
-            gameSession = getGameSession(gameId);
+        // Get or create game session
+        let gameSession = getGameSession(gameId);
+        
+        // If the requested game doesn't exist, use the default game
+        if (!gameSession) {
+            console.log(`Game ${gameId} not found, using default game session`);
+            gameId = 'default';
+            gameSession = getGameSession('default');
+            ws.clientInfo.gameId = gameId; // Update client info
+            
+            // Ensure the default game exists (it should always exist, but just in case)
             if (!gameSession) {
-                // Game doesn't exist
-                ws.send(JSON.stringify({
-                    type: 'error',
-                    message: 'Game not found. The game may have expired or been deleted.'
-                }));
-                ws.close();
-                return;
+                gameSession = ensureDefaultGameSession();
             }
-            
-            // Check if game is full
-            if (Object.keys(gameSession.players).length >= (gameSession.maxPlayers || MAX_PLAYERS_PER_GAME)) {
-                ws.send(JSON.stringify({
-                    type: 'error',
-                    message: 'Game is full. Please try another game or create a new one.'
-                }));
-                ws.close();
-                return;
-            }
-            
-            // Add connection to the game's connections set
-            if (!gameConnections.has(gameId)) {
-                gameConnections.set(gameId, new Set());
-            }
-            gameConnections.get(gameId).add(ws);
-            
-            // Initialize the player in the game session with safe starting values
-            gameSession.players[playerId] = {
-                id: playerId,
-                name: '',
-                position: generateRandomPosition(),
-                color: getRandomColor(),
-                size: 15,
-                score: 0,
-                velocityX: 0,
-                velocityY: 0,
-                lastActive: Date.now()
-            };
-            
-            console.log(`Player ${playerId} connected to game ${gameId} from ${ip}`);
-        } else {
-            // No gameId provided - this is a general connection
-            console.log(`Player ${playerId} connected without a game ID from ${ip}`);
         }
+        
+        // Check if game is full
+        if (Object.keys(gameSession.players).length >= (gameSession.maxPlayers || MAX_PLAYERS_PER_GAME)) {
+            ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Game is full. Please try another game or create a new one.'
+            }));
+            ws.close();
+            return;
+        }
+        
+        // Add connection to the game's connections set
+        if (!gameConnections.has(gameId)) {
+            gameConnections.set(gameId, new Set());
+        }
+        gameConnections.get(gameId).add(ws);
+        
+        // Initialize the player in the game session with safe starting values
+        gameSession.players[playerId] = {
+            id: playerId,
+            name: '',
+            position: generateRandomPosition(),
+            color: getRandomColor(),
+            size: 15,
+            score: 0,
+            velocityX: 0,
+            velocityY: 0,
+            lastActive: Date.now()
+        };
+        
+        console.log(`Player ${playerId} connected to game ${gameId} from ${ip}`);
         
         // Send initial data to the player
         // Log connection details for debugging
