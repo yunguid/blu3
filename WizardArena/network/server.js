@@ -50,7 +50,10 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ 
     server,
     // Enable client tracking
-    clientTracking: true
+    clientTracking: true,
+    // Add ping to keep connections alive
+    pingInterval: 10000,
+    pingTimeout: 5000
 });
 
 // Store active connections by game session
@@ -1217,5 +1220,11 @@ server.listen(PORT, '0.0.0.0', () => {
     if (process.env.RAILWAY_STATIC_URL) {
         console.log(`Railway deployment detected at: ${process.env.RAILWAY_STATIC_URL}`);
         console.log(`WebSocket URL: wss://${process.env.RAILWAY_STATIC_URL.replace('https://', '')}`);
+        
+        // Log connection debugging info
+        console.log(`Client tracking enabled: ${wss.options.clientTracking}`);
+        console.log(`Max payload: ${wss.options.maxPayload || 'default'}`);
+        console.log(`Ping interval: ${wss.options.pingInterval || 'none'}`);
+        console.log(`Ping timeout: ${wss.options.pingTimeout || 'none'}`);
     }
 });

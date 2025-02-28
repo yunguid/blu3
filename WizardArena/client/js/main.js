@@ -592,9 +592,22 @@ function connectToServer() {
         }
     };
     
-    socket.onclose = () => {
-        console.log('Disconnected from server');
-        setTimeout(connectToServer, 2000); // Try to reconnect after 2 seconds
+    // Limit reconnection attempts to prevent loops
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+    
+    socket.onclose = (event) => {
+        console.log('Disconnected from server. Code:', event.code, 'Reason:', event.reason);
+        
+        // Only attempt to reconnect a few times
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            console.log(`Reconnect attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`);
+            reconnectAttempts++;
+            setTimeout(connectToServer, 3000); // Try to reconnect after 3 seconds
+        } else {
+            console.log('Max reconnect attempts reached. Please refresh the page.');
+            showSystemMessage('Connection issues. Please refresh the page to try again.');
+        }
     };
 }
 
