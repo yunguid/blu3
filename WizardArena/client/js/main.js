@@ -439,8 +439,17 @@ function connectToServer() {
     // Check if we're in production (Vercel) or development (localhost)
     if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost') === false) {
         // Production environment - use the network server URL
-        // Use the correct WebSocket URL for the deployed server
-        serverUrl = 'wss://blu3-ekuls-projects.vercel.app';
+        // Determine if we're on the client or network domain
+        if (window.location.hostname.includes('blu3-ekuls-projects.vercel.app')) {
+            // We're on the network domain, use self
+            serverUrl = 'wss://blu3-ekuls-projects.vercel.app';
+        } else if (window.location.hostname.includes('blu3-client.vercel.app')) {
+            // We're on the client domain, connect to network domain
+            serverUrl = 'wss://blu3-ekuls-projects.vercel.app';
+        } else {
+            // Default fallback
+            serverUrl = 'wss://blu3-ekuls-projects.vercel.app';
+        }
         
         // If we're on a different domain than the WebSocket server, update the protocol
         if (window.location.protocol === 'https:') {
