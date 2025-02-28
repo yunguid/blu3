@@ -718,6 +718,7 @@ function connectToServer() {
                 
             case 'projectileCreated':
                 // Show successful shoot message
+                console.log('Projectile created with type:', data.projectileType || 'unknown');
                 showSystemMessage(`${data.projectileType || 'Default'} projectile fired!`);
                 break;
                 
@@ -951,13 +952,18 @@ function setupControls() {
     
     // Add projectile type selection with number keys
     document.addEventListener('keydown', (e) => {
+        console.log('Key pressed:', e.key);
         if (e.key === '1') {
+            console.log('Selecting fast projectile');
             selectWeapon('fast');
         } else if (e.key === '2') {
+            console.log('Selecting powerful projectile');
             selectWeapon('powerful');
         } else if (e.key === '3') {
+            console.log('Selecting aoe projectile');
             selectWeapon('aoe');
         } else if (e.key === '0') {
+            console.log('Selecting default projectile');
             selectWeapon('default');
         } else if (e.key === 'Tab') {
             // Toggle weapon selector when Tab is pressed
@@ -1248,6 +1254,11 @@ function shootProjectile() {
     window.lastShootTime = now; // Share with renderer
     
     // Send shoot command to server with projectile type
+    // Ensure we're using the current selectedProjectileType
+    // and update the window global variable to stay in sync
+    window.selectedProjectileType = selectedProjectileType;
+    console.log('Shooting with projectile type:', selectedProjectileType);
+    
     socket.send(JSON.stringify({
         type: 'shoot',
         dirX: normalizedDirX,
@@ -1435,9 +1446,16 @@ function getWeaponDescription(type) {
 
 function selectWeapon(type) {
     if (weaponTypes[type]) {
+        console.log('Selecting weapon type:', type);
+        
+        // Update both the local variable and the window global variable
         selectedProjectileType = type;
-        // Update global for renderer access
         window.selectedProjectileType = type;
+        
+        // Add more debugging to verify the update
+        console.log('Updated selectedProjectileType:', selectedProjectileType);
+        console.log('Updated window.selectedProjectileType:', window.selectedProjectileType);
+        
         updateWeaponIndicator();
         
         // Add visual effect for weapon switch
